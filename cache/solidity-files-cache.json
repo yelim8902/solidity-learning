@@ -2,8 +2,8 @@
   "_format": "hh-sol-cache-2",
   "files": {
     "/Users/yelim/Projects/hardhat-test/contracts/MyToken.sol": {
-      "lastModificationDate": 1760452154491,
-      "contentHash": "be279b0984401bbd2cef07e02b1af6d5",
+      "lastModificationDate": 1760452617397,
+      "contentHash": "13bbfc659fbb1a04a2b786f8f04be70f",
       "sourceName": "contracts/MyToken.sol",
       "solcConfig": {
         "version": "0.8.28",

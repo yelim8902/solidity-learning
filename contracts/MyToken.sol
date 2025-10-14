@@ -29,6 +29,7 @@ contract MyToken {
     }
 
     function transfer(address to, uint256 amount) external { // 상태변경 함수라 트랜젝션 필요
+        require(balanceOf[msg.sender] >= amount, "insufficient balance"); // 잔액 부족 예외 처리
         balanceOf[msg.sender] -= amount;
         balanceOf[to] += amount;
     }

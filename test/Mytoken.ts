@@ -39,6 +39,11 @@ describe("mytoken deploy", () => {
       BigInt(0.5 * 10 ** 18)
     );
   });
+  it("should ", async () => {
+    const signer1 = signers[1];
+    await myTokenC.transfer(signer1.address, hre.ethers.parseEther("1.1"));
+  });
+
   it("should approve and transferFrom", async () => {
     const signer0 = signers[0];
     const signer1 = signers[1];
