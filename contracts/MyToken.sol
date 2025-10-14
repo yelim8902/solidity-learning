@@ -14,11 +14,11 @@ contract MyToken {
     mapping(address => uint256) public balanceOf; // 조회 함수라 읽어오기만 함. 트랜젝션 X
     mapping(address => mapping(address => uint256)) public allowance;
 
-    constructor(string memory _name, string memory _symbol, uint8 _decimal){ // 문자열 앞에 memory 붙이는 이유 : 문자열은 메모리에 저장되어야 하기 때문
+    constructor(string memory _name, string memory _symbol, uint8 _decimal, uint256 _amount){ // 문자열 앞에 memory 붙이는 이유 : 문자열은 메모리에 저장되어야 하기 때문
         name = _name;
         symbol = _symbol;
         decimals = _decimal;
-        _mint(1*10**uint256(decimals), msg.sender); // 1 MT 에서 추가발행 안 됨
+        _mint(_amount*10**uint256(decimals), msg.sender); // 1 MT 에서 추가발행 안 됨
     }
 
     // 내부에서만 호출할땐 _ 붙임
