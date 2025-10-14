@@ -4,9 +4,7 @@ import "@nomicfoundation/hardhat-toolbox";
 const config: HardhatUserConfig = {
   defaultNetwork: "hardhat",
   networks: {
-    hardhat: {
-      chainId: 1337,
-    },
+    hardhat: {},
   },
   solidity: {
     version: "0.8.28",
