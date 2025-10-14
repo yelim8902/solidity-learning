@@ -12,7 +12,7 @@ contract MyToken {
 
     uint256 public totalSupply;
     mapping(address => uint256) public balanceOf; // 조회 함수라 읽어오기만 함. 트랜젝션 X
-
+    mapping(address => mapping(address => uint256)) public allowance;
 
     constructor(string memory _name, string memory _symbol, uint8 _decimal){ // 문자열 앞에 memory 붙이는 이유 : 문자열은 메모리에 저장되어야 하기 때문
         name = _name;
@@ -31,6 +31,19 @@ contract MyToken {
     function transfer(address to, uint256 amount) external { // 상태변경 함수라 트랜젝션 필요
         balanceOf[msg.sender] -= amount;
         balanceOf[to] += amount;
+    }
+
+    function approve(address spender, uint256 amount) external returns (bool) {
+        allowance[msg.sender][spender] = amount;
+        return true;
+    }
+
+    function transferFrom(address from, address to, uint256 amount) external returns (bool) {
+        require(allowance[from][msg.sender] >= amount, "Allowance too low");
+        allowance[from][msg.sender] -= amount;
+        balanceOf[from] -= amount;
+        balanceOf[to] += amount;
+        return true;
     }
 
 
