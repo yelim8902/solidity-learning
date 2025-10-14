@@ -18,7 +18,20 @@ contract MyToken {
         name = _name;
         symbol = _symbol;
         decimals = _decimal;
+        _mint(1*10**uint256(decimals), msg.sender); // 1 MT 에서 추가발행 안 됨
     }
+
+    // 내부에서만 호출할땐 _ 붙임
+    function _mint(uint256 amount, address owner) internal {
+        totalSupply += amount;
+        balanceOf[owner] += amount;
+        
+    }
+
+
+
+
+
 
     // function totalSupply() external view returns (uint256) { //외부에서만 호출, 필드를 보기만 할거임
     //     return totalSupply;
