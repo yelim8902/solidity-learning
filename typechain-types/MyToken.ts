@@ -3,6 +3,7 @@
 /* eslint-disable */
 import type {
   BaseContract,
+  BigNumberish,
   BytesLike,
   FunctionFragment,
   Result,
@@ -28,6 +29,7 @@ export interface MyTokenInterface extends Interface {
       | "name"
       | "symbol"
       | "totalSupply"
+      | "transfer"
   ): FunctionFragment;
 
   encodeFunctionData(
@@ -41,6 +43,10 @@ export interface MyTokenInterface extends Interface {
     functionFragment: "totalSupply",
     values?: undefined
   ): string;
+  encodeFunctionData(
+    functionFragment: "transfer",
+    values: [AddressLike, BigNumberish]
+  ): string;
 
   decodeFunctionResult(functionFragment: "balanceOf", data: BytesLike): Result;
   decodeFunctionResult(functionFragment: "decimals", data: BytesLike): Result;
@@ -50,6 +56,7 @@ export interface MyTokenInterface extends Interface {
     functionFragment: "totalSupply",
     data: BytesLike
   ): Result;
+  decodeFunctionResult(functionFragment: "transfer", data: BytesLike): Result;
 }
 
 export interface MyToken extends BaseContract {
@@ -105,6 +112,12 @@ export interface MyToken extends BaseContract {
 
   totalSupply: TypedContractMethod<[], [bigint], "view">;
 
+  transfer: TypedContractMethod<
+    [to: AddressLike, amount: BigNumberish],
+    [void],
+    "nonpayable"
+  >;
+
   getFunction<T extends ContractMethod = ContractMethod>(
     key: string | FunctionFragment
   ): T;
@@ -124,6 +137,13 @@ export interface MyToken extends BaseContract {
   getFunction(
     nameOrSignature: "totalSupply"
   ): TypedContractMethod<[], [bigint], "view">;
+  getFunction(
+    nameOrSignature: "transfer"
+  ): TypedContractMethod<
+    [to: AddressLike, amount: BigNumberish],
+    [void],
+    "nonpayable"
+  >;
 
   filters: {};
 }

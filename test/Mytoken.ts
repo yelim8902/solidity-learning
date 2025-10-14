@@ -16,19 +16,27 @@ describe("mytoken deploy", () => {
     expect(await myTokenC.decimals()).to.equal(18);
   });
   it("should return name ", async () => {
-    expect(await myTokenC.name()).equal("MyToken");
+    expect(await myTokenC.name()).to.equal("MyToken");
   });
   it("should return symbol ", async () => {
-    expect(await myTokenC.symbol()).equal("MT");
+    expect(await myTokenC.symbol()).to.equal("MT");
   });
   it("should return decimals ", async () => {
-    expect(await myTokenC.decimals()).equal(18);
+    expect(await myTokenC.decimals()).to.equal(18);
   });
-  it("should return 0 totalSupply ", async () => {
-    expect(await myTokenC.totalSupply()).equal(0);
+  it("should return 1MT totalSupply ", async () => {
+    expect(await myTokenC.totalSupply()).to.equal(1n * 10n ** 18n);
   });
-  it("should return 0 balance for signer 0", async () => {
+  // 1MT = 10^18
+  it("should return 1MT balance for signer 0", async () => {
     const signer0 = signers[0];
-    expect(await myTokenC.balanceOf(signer0.address)).equal(0);
+    expect(await myTokenC.balanceOf(signer0.address)).to.equal(1n * 10n ** 18n);
+  });
+  it("should have 0.5MT", async () => {
+    const signer1 = signers[1];
+    await myTokenC.transfer(signer1.address, hre.ethers.parseEther("0.5"));
+    expect(await myTokenC.balanceOf(signer1.address)).to.equal(
+      BigInt(0.5 * 10 ** 18)
+    );
   });
 });
