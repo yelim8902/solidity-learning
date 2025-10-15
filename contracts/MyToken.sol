@@ -8,12 +8,14 @@ contract MyToken {
     event Transfer(address indexed from, address indexed to, uint256 value); // indexed는 topic으로 빠르게 조회 가능
     string public name;
     string public symbol;
-    uint8 public decimals; // uint8 -> 8bit unsigned int, unit16, ... , unit256
+    uint8 public decimals; 
+    // uint8 -> 8bit unsigned int, unit16, ... , unit256
     // 1 ETH = 10^18 wei, 1 wei = 10^-18 ETH
 
     uint256 public totalSupply;
     mapping(address => uint256) public balanceOf; // 조회 함수라 읽어오기만 함. 트랜젝션 X
     mapping(address => mapping(address => uint256)) public allowance;
+
     constructor(string memory _name, string memory _symbol, uint8 _decimal, uint256 _amount){ // 문자열 앞에 memory 붙이는 이유 : 문자열은 메모리에 저장되어야 하기 때문
         name = _name;
         symbol = _symbol;
@@ -37,17 +39,24 @@ contract MyToken {
         emit Transfer(msg.sender, to, amount);
     }
 
-    function approve(address spender, uint256 amount) external returns (bool) {
-        allowance[msg.sender][spender] = amount;
-        return true;
-    }
+    /*
+    token owner -> bank contract
+    token owner -> router contract -> bank contract
+    token owner -> router contract -> bank contract(multi contract)
+    */
 
-    function transferFrom(address from, address to, uint256 amount) external returns (bool) {
-        require(allowance[from][msg.sender] >= amount, "Allowance too low");
-        allowance[from][msg.sender] -= amount;
-        balanceOf[from] -= amount;
-        balanceOf[to] += amount;
-        return true;
+    //approve 는 권한 부여 함수 
+    function approve(address spender, uint256 amount) external {
+        allowance[msg.sender][spender] = amount;
+    }
+   
+    //transferFrom 는 권한 사용 함수 
+    function transferFrom(address from, address to, uint256 amount) external {
+       address spender = msg.sender;
+        require(allowance[from][spender] >= amount, "insufficient allowance"); // 권한 없으면 예외 처리
+       allowance[from][spender] -= amount;
+       balanceOf[from] -= amount;
+       balanceOf[to] += amount;
     }
 
 
