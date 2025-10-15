@@ -5,6 +5,7 @@
 pragma solidity ^0.8.28;
 
 contract MyToken {
+    event Transfer(address from, address to, uint256 value);
     string public name;
     string public symbol;
     uint8 public decimals; // uint8 -> 8bit unsigned int, unit16, ... , unit256
@@ -32,6 +33,8 @@ contract MyToken {
         require(balanceOf[msg.sender] >= amount, "insufficient balance"); // 잔액 부족 예외 처리
         balanceOf[msg.sender] -= amount;
         balanceOf[to] += amount;
+
+        emit Transfer(msg.sender, to, amount);
     }
 
     function approve(address spender, uint256 amount) external returns (bool) {

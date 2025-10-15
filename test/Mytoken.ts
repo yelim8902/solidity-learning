@@ -50,7 +50,13 @@ describe("My Token", () => {
   describe("Transfer", () => {
     it("should have 0.5MT", async () => {
       const signer1 = signers[1];
-      await myTokenC.transfer(signer1.address, hre.ethers.parseEther("0.5"));
+      const tx = await myTokenC.transfer(
+        signer1.address,
+        hre.ethers.parseEther("0.5")
+      );
+      const receipt = await tx.wait();
+      console.log(receipt?.logs);
+
       expect(await myTokenC.balanceOf(signer1.address)).to.equal(
         BigInt(0.5 * 10 ** 18)
       );
