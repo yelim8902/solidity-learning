@@ -5,7 +5,7 @@
 pragma solidity ^0.8.28;
 
 contract MyToken {
-    event Transfer(address from, address to, uint256 value);
+    event Transfer(address indexed from, address indexed to, uint256 value); // indexed는 topic으로 빠르게 조회 가능
     string public name;
     string public symbol;
     uint8 public decimals; // uint8 -> 8bit unsigned int, unit16, ... , unit256
@@ -14,7 +14,6 @@ contract MyToken {
     uint256 public totalSupply;
     mapping(address => uint256) public balanceOf; // 조회 함수라 읽어오기만 함. 트랜젝션 X
     mapping(address => mapping(address => uint256)) public allowance;
-
     constructor(string memory _name, string memory _symbol, uint8 _decimal, uint256 _amount){ // 문자열 앞에 memory 붙이는 이유 : 문자열은 메모리에 저장되어야 하기 때문
         name = _name;
         symbol = _symbol;
@@ -27,6 +26,7 @@ contract MyToken {
         totalSupply += amount;
         balanceOf[owner] += amount;
         
+        emit Transfer(address(0), owner, amount);
     }
 
     function transfer(address to, uint256 amount) external { // 상태변경 함수라 트랜젝션 필요

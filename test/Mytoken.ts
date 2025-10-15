@@ -49,18 +49,27 @@ describe("My Token", () => {
 
   describe("Transfer", () => {
     it("should have 0.5MT", async () => {
+      const signer0 = signers[0];
       const signer1 = signers[1];
-      const tx = await myTokenC.transfer(
-        signer1.address,
-        hre.ethers.parseEther("0.5")
-      );
-      const receipt = await tx.wait();
-      console.log(receipt?.logs);
+      await expect(
+        myTokenC.transfer(signer1.address, hre.ethers.parseEther("0.5"))
+      )
+        .to.emit(myTokenC, "Transfer")
+        .withArgs(
+          signer0.address,
+          signer1.address,
+          hre.ethers.parseEther("0.5")
+        );
+
+      // 블록체인은 가스비가 드는 디비라서 데이터를 직접 온체인에 저장X, 필요한 정보만 레시피 저장 후 쿼리 사용
 
       expect(await myTokenC.balanceOf(signer1.address)).to.equal(
         BigInt(0.5 * 10 ** 18)
       );
+      const filter = myTokenC.filters.Transfer(signer0.address);
+      const logs = await myTokenC.queryFilter(filter, 0, "latest");
     });
+
     it("should be reverted with insufficient balance error", async () => {
       const signer1 = signers[1];
       await expect(
