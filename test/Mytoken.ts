@@ -138,4 +138,38 @@ describe("My Token", () => {
       ).to.be.revertedWith("insufficient allowance");
     });
   });
+
+  describe("Approve and TransferFrom - Homework", () => {
+    it("should approve signer1 and transferFrom signer0 to signer1", async () => {
+      const signer0 = signers[0];
+      const signer1 = signers[1];
+
+      // 1. approve: signer0이 signer1에게 1MT 전송 권한 부여
+      await myTokenC
+        .connect(signer0)
+        .approve(signer1.address, hre.ethers.parseEther("1"));
+
+      // allowance 확인
+      expect(
+        await myTokenC.allowance(signer0.address, signer1.address)
+      ).to.equal(hre.ethers.parseEther("1"));
+
+      // 2. transferFrom: signer1이 signer0의 MT토큰을 자신의 주소(signer1)에게 전송
+      await myTokenC
+        .connect(signer1)
+        .transferFrom(
+          signer0.address,
+          signer1.address,
+          hre.ethers.parseEther("1")
+        );
+
+      // 3. balance 확인
+      expect(await myTokenC.balanceOf(signer0.address)).to.equal(
+        hre.ethers.parseEther("99")
+      );
+      expect(await myTokenC.balanceOf(signer1.address)).to.equal(
+        hre.ethers.parseEther("1")
+      );
+    });
+  });
 });
