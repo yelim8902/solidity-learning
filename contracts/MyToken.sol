@@ -6,6 +6,8 @@ pragma solidity ^0.8.28;
 
 contract MyToken {
     event Transfer(address indexed from, address indexed to, uint256 value); // indexed는 topic으로 빠르게 조회 가능
+    event Approval(address indexed spender, uint256 value);
+
     string public name;
     string public symbol;
     uint8 public decimals; 
@@ -48,6 +50,7 @@ contract MyToken {
     //approve 는 권한 부여 함수 
     function approve(address spender, uint256 amount) external {
         allowance[msg.sender][spender] = amount;
+        emit Approval(spender, amount);
     }
    
     //transferFrom 는 권한 사용 함수 
@@ -57,6 +60,7 @@ contract MyToken {
        allowance[from][spender] -= amount;
        balanceOf[from] -= amount;
        balanceOf[to] += amount;
+       emit Transfer(from, to, amount);
     }
 
 
