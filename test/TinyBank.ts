@@ -21,6 +21,7 @@ describe("TinyBank", () => {
     TinyBankC = await new TinyBank__factory(signers[0]).deploy(
       await MyTokenC.getAddress()
     );
+    await MyTokenC.setManager(await TinyBankC.getAddress());
   });
 
   describe("Initialized state check", () => {
@@ -77,6 +78,13 @@ describe("TinyBank", () => {
           Number(DECIMALS)
         )
       );
+    });
+    it("should revert when changing rewardPerBlock not by hacker", async () => {
+      const hacker = signers[2];
+      const rewardToChange = hre.ethers.parseUnits("10000", Number(DECIMALS));
+      await expect(
+        TinyBankC.connect(hacker).setRewardPerBlock(rewardToChange)
+      ).to.be.revertedWith("You are not authorized to change rewardPerBlock");
     });
   });
 });
