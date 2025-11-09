@@ -27,7 +27,8 @@ interface IMyToken {
 
 contract TinyBank {
 
-    event Staked(address, uint256);
+    event Staked(address to, uint256 amount);
+    event Withdrawal(address from, uint256 amount);
 
     // 예치할 토큰을 먼저 배포하고, 그 주소를 생성자에 전달하여 저장
     IMyToken public stakingToken;
@@ -46,6 +47,13 @@ contract TinyBank {
         staked[msg.sender] += _amount;
         totalStaked += _amount;
         emit Staked(msg.sender, _amount);
+    }
+    function withdraw(uint256 _amount) external {
+        require(staked[msg.sender] >= _amount, "insufficient staked amount");
+        stakingToken.transfer(msg.sender, _amount);
+        staked[msg.sender] -= _amount;
+        totalStaked -= _amount;
+        emit Withdrawal(msg.sender, _amount);
     }
 
 
