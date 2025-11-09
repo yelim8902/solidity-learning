@@ -27,5 +27,23 @@ describe("TinyBank", () => {
     it("should return totalStaked 0", async () => {
       expect(await TinyBankC.totalStaked()).to.equal(0n);
     });
+    it("should return staked 0 amount of signer 0", async () => {
+      const signer0 = signers[0];
+      expect(await TinyBankC.staked(signer0.address)).equal(0);
+    });
+  });
+
+  describe("Staking", () => {
+    it("should return staked amount", async () => {
+      const signer0 = signers[0];
+      const stakingAmount = hre.ethers.parseUnits("50", DECIMALS);
+      await MyTokenC.approve(await TinyBankC.getAddress(), stakingAmount);
+      await TinyBankC.stake(stakingAmount);
+      expect(await TinyBankC.staked(signer0.address)).equal(stakingAmount);
+      expect(await TinyBankC.totalStaked()).equal(stakingAmount);
+      expect(await MyTokenC.balanceOf(await TinyBankC)).equal(
+        await TinyBankC.totalStaked()
+      );
+    });
   });
 });
