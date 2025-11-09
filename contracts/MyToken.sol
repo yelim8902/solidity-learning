@@ -71,7 +71,7 @@ contract MyToken is ManagedAccess {
     }
 
     function mint(uint256 amount, address to) external {
-        require(msg.sender == manager, "You are not authorized");
+        require(msg.sender == manager, "You are not authorized to mint");
         _mint(amount, to);
     } 
 
