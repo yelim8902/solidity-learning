@@ -61,27 +61,26 @@ contract TinyBank {
     // reward 분배 함수 : 블록 넘버 차이만큼 보상 분배 
     // Who, When, How much?
     // genesis staking -> reward 분배 X
-    function updateReward(address to) internal {
+    modifier updateReward(address to) {
         if (staked[to] > 0) {
             uint256 blocks = block.number - lastClaimedBlock[to];
             uint256 reward = (blocks * rewardPerBlock * staked[to]) / totalStaked;
             stakingToken.mint(reward, to);
-            }
-            lastClaimedBlock[to] = block.number;
+        }
+        lastClaimedBlock[to] = block.number;
+        _; // caller's code will be executed after this line
     }
 
-    function stake(uint256 _amount) external {
+    function stake(uint256 _amount) external updateReward(msg.sender) {
         //IMyToken.transfer(msg.sender, address(this), _amount); 이건 TinyBank contract에서 mytoken을 예치하는 것이라서 안 됨
         require(_amount >= 0, "cannot stake 0 amount");
-        updateReward(msg.sender);
         stakingToken.transferFrom(msg.sender, address(this), _amount);
         staked[msg.sender] += _amount;
         totalStaked += _amount;
         emit Staked(msg.sender, _amount);
     }
-    function withdraw(uint256 _amount) external {
+    function withdraw(uint256 _amount) external updateReward(msg.sender) {
         require(staked[msg.sender] >= _amount, "insufficient staked amount");
-        updateReward(msg.sender);
         stakingToken.transfer(msg.sender, _amount);
         staked[msg.sender] -= _amount;
         totalStaked -= _amount;
