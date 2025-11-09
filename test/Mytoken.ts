@@ -44,18 +44,21 @@ describe("My Token", () => {
       );
     });
 
+    //TDD : Test Driven Development
+    // 1. 테스트 코드 작성
+    // 2. 테스트 코드 실행
+    // 3. 테스트 코드 실행 결과 확인
+    // 4. 테스트 코드 수정
+    // 5. 테스트 코드 실행
+    // 6. 테스트 코드 실행 결과 확인
+    // 7. 테스트 코드 수정
+    // 8. 테스트 코드 실행
     it("should return or revert when minting infinitly", async () => {
-      const signer2 = signers[2];
+      const hacker = signers[2];
       const mintingAgainAmount = hre.ethers.parseUnits("100", Number(DECIMALS));
-      await myTokenC.connect(signer2).mint(mintingAgainAmount, signer2.address);
-      console.log(
-        hre.ethers
-          .formatUnits(
-            await myTokenC.balanceOf(signer2.address),
-            Number(DECIMALS)
-          )
-          .toString() + "MT"
-      );
+      await expect(
+        myTokenC.connect(hacker).mint(mintingAgainAmount, hacker.address)
+      ).to.be.revertedWith("You are not authorized to mint");
     });
   });
 
