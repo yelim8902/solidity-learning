@@ -26,13 +26,27 @@ interface IMyToken {
 
 
 contract TinyBank {
+
+    event Staked(address, uint256);
+
     // 예치할 토큰을 먼저 배포하고, 그 주소를 생성자에 전달하여 저장
     IMyToken public stakingToken;
+    mapping(address => uint256) staked;
+    uint256 public totalStaked;
 
     constructor(IMyToken _stakingToken) {
         //_stakingToken 주소를 받아서 stakingToken 변수에 저장
         stakingToken = _stakingToken;
     }
 
-    
+    function stake(uint256 _amount) external {
+        //IMyToken.transfer(msg.sender, address(this), _amount); 이건 TinyBank contract에서 mytoken을 예치하는 것이라서 안 됨
+        require(_amount >= 0, "cannot stake 0 amount");
+        stakingToken.transferFrom(msg.sender, address(this), _amount);
+        staked[msg.sender] += _amount;
+        totalStaked += _amount;
+        emit Staked(msg.sender, _amount);
+    }
+
+
 }
