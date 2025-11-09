@@ -81,40 +81,6 @@ describe("My Token", () => {
     });
   });
 
-  describe("Approve and TransferFrom", () => {
-    it("should approve and transferFrom", async () => {
-      const signer0 = signers[0];
-      const signer1 = signers[1];
-
-      // 1. approve: signer0이 signer1에게 0.3MT 전송 권한 부여
-      await myTokenC
-        .connect(signer0)
-        .approve(signer1.address, hre.ethers.parseEther("0.3"));
-
-      // allowance 확인
-      expect(
-        await myTokenC.allowance(signer0.address, signer1.address)
-      ).to.equal(hre.ethers.parseEther("0.3"));
-
-      // 2. transferFrom: signer1이 signer0의 토큰을 자신에게 전송
-      await myTokenC
-        .connect(signer1)
-        .transferFrom(
-          signer0.address,
-          signer1.address,
-          hre.ethers.parseEther("0.3")
-        );
-
-      // 3. balance 확인
-      expect(await myTokenC.balanceOf(signer0.address)).to.equal(
-        hre.ethers.parseEther("99.7")
-      );
-      expect(await myTokenC.balanceOf(signer1.address)).to.equal(
-        hre.ethers.parseEther("0.3")
-      );
-    });
-  });
-
   describe("TransferFrom", () => {
     it("should emit Approval event", async () => {
       const signer1 = signers[1];
