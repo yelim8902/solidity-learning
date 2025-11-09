@@ -51,14 +51,25 @@ contract TinyBank is ManagedAccess {
 
     mapping(address => uint256) public lastClaimedBlock;
     uint256 defaultRewardPerBlock = 1 * 10 ** 18; // 1 MT/block
-    uint256 rewardPerBlock;
+    uint256 public rewardPerBlock;
+    address[] public managers;
+    mapping(address => bool) public isManager;
+    mapping(address => bool) private confirmations;
 
     mapping(address => uint256) public staked;
     uint256 public totalStaked; // 총 예치된 토큰 양
-    constructor(IMyToken _stakingToken) ManagedAccess(msg.sender, msg.sender) {
+    constructor(IMyToken _stakingToken, address[] memory _managers) ManagedAccess(msg.sender, msg.sender) {
         //_stakingToken 주소를 받아서 stakingToken 변수에 저장
         stakingToken = _stakingToken;
         rewardPerBlock = defaultRewardPerBlock;
+        require(_managers.length >= 3, "Need at least three managers");
+        for (uint256 i = 0; i < _managers.length; i++) {
+            address managerAddress = _managers[i];
+            require(managerAddress != address(0), "Manager cannot be zero address");
+            require(!isManager[managerAddress], "Manager already added");
+            managers.push(managerAddress);
+            isManager[managerAddress] = true;
+        }
     }
 
     // reward 분배 함수 : 블록 넘버 차이만큼 보상 분배 
@@ -74,7 +85,27 @@ contract TinyBank is ManagedAccess {
         _; // caller's code will be executed after this line
     }
 
-    function setRewardPerBlock(uint256 _amount) external onlyOwner {
+    modifier onlyAllConfirmed() {
+        require(isManager[msg.sender], "You are not a manager");
+        require(_allConfirmed(), "Not all confirmed yet");
+        _;
+        _resetConfirmations();
+    }
+
+    modifier onlyRegisteredManager() {
+        require(isManager[msg.sender], "You are not a manager");
+        _;
+    }
+
+    function confirm() external onlyRegisteredManager {
+        confirmations[msg.sender] = true;
+    }
+
+    function hasConfirmed(address manager) external view returns (bool) {
+        return confirmations[manager];
+    }
+
+    function setRewardPerBlock(uint256 _amount) external onlyAllConfirmed {
         rewardPerBlock = _amount;
     }
 
@@ -92,6 +123,21 @@ contract TinyBank is ManagedAccess {
         staked[msg.sender] -= _amount;
         totalStaked -= _amount;
         emit Withdrawal(msg.sender, _amount);
+    }
+
+    function _allConfirmed() private view returns (bool) {
+        for (uint256 i = 0; i < managers.length; i++) {
+            if (!confirmations[managers[i]]) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    function _resetConfirmations() private {
+        for (uint256 i = 0; i < managers.length; i++) {
+            confirmations[managers[i]] = false;
+        }
     }
 
 
