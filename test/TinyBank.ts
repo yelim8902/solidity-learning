@@ -41,7 +41,7 @@ describe("TinyBank", () => {
       await TinyBankC.stake(stakingAmount);
       expect(await TinyBankC.staked(signer0.address)).equal(stakingAmount);
       expect(await TinyBankC.totalStaked()).equal(stakingAmount);
-      expect(await MyTokenC.baslanceOf(await TinyBankC)).equal(
+      expect(await MyTokenC.balanceOf(await TinyBankC)).equal(
         await TinyBankC.totalStaked()
       );
     });

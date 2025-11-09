@@ -16,13 +16,27 @@ pragma solidity ^0.8.28;
 // 1) user가 마이토큰을 예치 -> mytoken의 transfer 함수 호출(user -> TinyBank로 mytoken 전송)
 
 
+//Reward
+// - reward token : MyToken
+// - reward resources : 1 MT/block minting
+// - reward strategy : staked[user]/totalStaked distribution ratio
+
+// signer0 block 0 staking
+// signer1 block 5 staking
+// 0-- 1-- 2-- 3-- 4-- 5-- 
+// |                   |
+// signer0 10MT        signer1 10MT
+
+
+
 //mytoken contract와 연동하기 위해 interface 생성
 interface IMyToken {
     
     function transfer(address to, uint256 amount) external;
     function transferFrom(address from, address to, uint256 amount) external;
+    function mint(uint256 amount, address owner) external;
     
-}
+}   
 
 
 contract TinyBank {
@@ -32,12 +46,25 @@ contract TinyBank {
 
     // 예치할 토큰을 먼저 배포하고, 그 주소를 생성자에 전달하여 저장
     IMyToken public stakingToken;
+
+    mapping(address => uint256) public lastClaimedBlock;
+    uint256 rewardPerBlock = 1 * 10 ** 18; // 1 MT/block
+
     mapping(address => uint256) public staked;
-    uint256 public totalStaked;
+    uint256 public totalStaked; // 총 예치된 토큰 양
 
     constructor(IMyToken _stakingToken) {
         //_stakingToken 주소를 받아서 stakingToken 변수에 저장
         stakingToken = _stakingToken;
+    }
+
+    // reward 분배 함수 : 블록 넘버 차이만큼 보상 분배 
+    // Who, When, How much
+    function distributeReward(address to) internal {
+            uint256 blocks = block.number - lastClaimedBlock[to];
+            uint256 reward = (blocks * rewardPerBlock * staked[to]) / totalStaked;
+            stakingToken.mint(reward, to);
+            lastClaimedBlock[to] = block.number;
     }
 
     function stake(uint256 _amount) external {
@@ -50,6 +77,7 @@ contract TinyBank {
     }
     function withdraw(uint256 _amount) external {
         require(staked[msg.sender] >= _amount, "insufficient staked amount");
+        distributeReward(msg.sender);
         stakingToken.transfer(msg.sender, _amount);
         staked[msg.sender] -= _amount;
         totalStaked -= _amount;

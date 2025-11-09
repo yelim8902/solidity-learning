@@ -63,6 +63,10 @@ contract MyToken {
        emit Transfer(from, to, amount);
     }
 
+    function mint(uint256 amount, address owner) external {
+        _mint(amount, owner);
+    } // 취약점 : 누구나 추가발행 가능
+
 
 
 
