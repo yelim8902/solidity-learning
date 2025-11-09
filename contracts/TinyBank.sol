@@ -47,15 +47,18 @@ contract TinyBank {
     // 예치할 토큰을 먼저 배포하고, 그 주소를 생성자에 전달하여 저장
     IMyToken public stakingToken;
 
+    address public owner;
     mapping(address => uint256) public lastClaimedBlock;
-    uint256 rewardPerBlock = 1 * 10 ** 18; // 1 MT/block
+    uint256 defaultRewardPerBlock = 1 * 10 ** 18; // 1 MT/block
+    uint256 rewardPerBlock;
 
     mapping(address => uint256) public staked;
     uint256 public totalStaked; // 총 예치된 토큰 양
-
     constructor(IMyToken _stakingToken) {
         //_stakingToken 주소를 받아서 stakingToken 변수에 저장
         stakingToken = _stakingToken;
+        owner = msg.sender;
+        rewardPerBlock = defaultRewardPerBlock;
     }
 
     // reward 분배 함수 : 블록 넘버 차이만큼 보상 분배 
@@ -69,6 +72,11 @@ contract TinyBank {
         }
         lastClaimedBlock[to] = block.number;
         _; // caller's code will be executed after this line
+    }
+
+    function setRewardPerBlock(uint256 _amount) external {
+        require(msg.sender == owner, "You are not authorized to change rewardPerBlock");
+        rewardPerBlock = _amount;
     }
 
     function stake(uint256 _amount) external updateReward(msg.sender) {
