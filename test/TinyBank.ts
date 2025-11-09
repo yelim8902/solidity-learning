@@ -9,9 +9,11 @@ describe("TinyBank", () => {
   let MyTokenC: MyToken;
   let TinyBankC: TinyBank;
   let signers: HardhatEthersSigner[];
+  let managers: string[];
 
   beforeEach("should deploy", async () => {
     signers = await hre.ethers.getSigners();
+    managers = [signers[0].address, signers[1].address, signers[2].address];
     MyTokenC = await new MyToken__factory(signers[0]).deploy(
       "MyToken",
       "MT",
@@ -19,7 +21,8 @@ describe("TinyBank", () => {
       MINTING_AMOUNT
     );
     TinyBankC = await new TinyBank__factory(signers[0]).deploy(
-      await MyTokenC.getAddress()
+      await MyTokenC.getAddress(),
+      managers
     );
     await MyTokenC.setManager(await TinyBankC.getAddress());
   });
@@ -80,11 +83,41 @@ describe("TinyBank", () => {
       );
     });
     it("should revert when changing rewardPerBlock not by hacker", async () => {
-      const hacker = signers[2];
+      const hacker = signers[4];
       const rewardToChange = hre.ethers.parseUnits("10000", Number(DECIMALS));
       await expect(
         TinyBankC.connect(hacker).setRewardPerBlock(rewardToChange)
-      ).to.be.revertedWith("You are not authorized");
+      ).to.be.revertedWith("You are not a manager");
+    });
+    it("should revert when not all managers confirmed", async () => {
+      const rewardToChange = hre.ethers.parseUnits("2", Number(DECIMALS));
+      await TinyBankC.connect(signers[0]).confirm();
+      await expect(
+        TinyBankC.connect(signers[0]).setRewardPerBlock(rewardToChange)
+      ).to.be.revertedWith("Not all confirmed yet");
+    });
+    it("should allow rewardPerBlock change after all managers confirm", async () => {
+      const firstReward = hre.ethers.parseUnits("3", Number(DECIMALS));
+      const secondReward = hre.ethers.parseUnits("5", Number(DECIMALS));
+      await TinyBankC.connect(signers[0]).confirm();
+      await TinyBankC.connect(signers[1]).confirm();
+      await TinyBankC.connect(signers[2]).confirm();
+      await TinyBankC.connect(signers[0]).setRewardPerBlock(firstReward);
+      expect(await TinyBankC.rewardPerBlock()).to.equal(firstReward);
+      expect(await TinyBankC.hasConfirmed(signers[0].address)).to.equal(false);
+      expect(await TinyBankC.hasConfirmed(signers[1].address)).to.equal(false);
+      expect(await TinyBankC.hasConfirmed(signers[2].address)).to.equal(false);
+      await TinyBankC.connect(signers[0]).confirm();
+      await TinyBankC.connect(signers[1]).confirm();
+      await TinyBankC.connect(signers[2]).confirm();
+      await TinyBankC.connect(signers[1]).setRewardPerBlock(secondReward);
+      expect(await TinyBankC.rewardPerBlock()).to.equal(secondReward);
+    });
+    it("should revert confirm from non manager", async () => {
+      const stranger = signers[4];
+      await expect(TinyBankC.connect(stranger).confirm()).to.be.revertedWith(
+        "You are not a manager"
+      );
     });
   });
 });
