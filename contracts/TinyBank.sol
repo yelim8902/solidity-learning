@@ -31,7 +31,7 @@ contract TinyBank {
 
     // 예치할 토큰을 먼저 배포하고, 그 주소를 생성자에 전달하여 저장
     IMyToken public stakingToken;
-    mapping(address => uint256) staked;
+    mapping(address => uint256) public staked;
     uint256 public totalStaked;
 
     constructor(IMyToken _stakingToken) {
