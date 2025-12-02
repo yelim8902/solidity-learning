@@ -1,7 +1,7 @@
 import hre from "hardhat";
 import { expect } from "chai";
-import { NativeBank } from "../typechain-types";
-import { NativeBank__factory } from "../typechain-types";
+import { NativeBank, Exploit } from "../typechain-types";
+import { NativeBank__factory, Exploit__factory } from "../typechain-types";
 import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
 
 describe("NativeBank", () => {
@@ -146,6 +146,68 @@ describe("NativeBank", () => {
       // Signer1 withdraws
       await NativeBankC.connect(signer1).withdraw();
       expect(await NativeBankC.balanceOf(signer1.address)).to.equal(0n);
+    });
+  });
+
+  describe("Reentrancy Attack", () => {
+    it("should prevent reentrancy attack with ReentrancyGuard", async () => {
+      const attacker = signers[1];
+      const victim = signers[2];
+      const victimDeposit = hre.ethers.parseEther("2.0");
+      const attackerDeposit = hre.ethers.parseEther("1.0");
+
+      // Victim deposits 2 ETH
+      await victim.sendTransaction({
+        to: await NativeBankC.getAddress(),
+        value: victimDeposit,
+      });
+
+      // Deploy Exploit contract
+      const ExploitC = await new Exploit__factory(attacker).deploy(
+        await NativeBankC.getAddress()
+      );
+
+      // Attacker deposits 1 ETH and triggers exploit
+      // The exploit function deposits 1 ETH and then calls withdraw()
+      // When withdraw() tries to send ETH, it triggers receive() in Exploit contract
+      // receive() tries to call withdraw() again, but nonReentrant modifier prevents it
+      // This causes the call to fail with "failed to send native token"
+      await expect(
+        ExploitC.connect(attacker).exploit({ value: attackerDeposit })
+      ).to.be.revertedWith("failed to send native token");
+
+      // Since the transaction reverted, all state changes are rolled back
+      // balanceOf should be 0 because the exploit function deposits and then withdraws
+      // but the transaction reverts, so balanceOf should be 0 (deposit happened, but withdraw failed)
+      // Actually, since the entire transaction reverts, balanceOf should be 0
+      // because the deposit in exploit() function also reverts
+      expect(await NativeBankC.balanceOf(await ExploitC.getAddress())).to.equal(
+        0n
+      );
+
+      // NativeBank should still have only victim's deposit (2 ETH)
+      // because attacker's deposit transaction reverted
+      const bankBalance = await hre.ethers.provider.getBalance(
+        await NativeBankC.getAddress()
+      );
+      expect(bankBalance).to.equal(victimDeposit);
+    });
+
+    it("should allow normal withdrawal after reentrancy guard is reset", async () => {
+      const signer0 = signers[0];
+      const depositAmount = hre.ethers.parseEther("1.0");
+
+      // Deposit
+      await signer0.sendTransaction({
+        to: await NativeBankC.getAddress(),
+        value: depositAmount,
+      });
+
+      // Normal withdrawal should work
+      await NativeBankC.connect(signer0).withdraw();
+
+      // balanceOf should be 0
+      expect(await NativeBankC.balanceOf(signer0.address)).to.equal(0n);
     });
   });
 });
