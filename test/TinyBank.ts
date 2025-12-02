@@ -1,28 +1,48 @@
 import hre from "hardhat";
 import { expect } from "chai";
 import { MINTING_AMOUNT, DECIMALS } from "./constant";
-import { MyToken, TinyBank } from "../typechain-types";
-import { MyToken__factory, TinyBank__factory } from "../typechain-types";
+import { Contract, ContractFactory } from "ethers";
 import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
 
-describe("TinyBank", () => {
-  let MyTokenC: MyToken;
-  let TinyBankC: TinyBank;
+describe("TinyBank (Vyper)", () => {
+  let MyTokenC: Contract;
+  let TinyBankC: Contract;
   let signers: HardhatEthersSigner[];
   let managers: string[];
 
   beforeEach("should deploy", async () => {
     signers = await hre.ethers.getSigners();
     managers = [signers[0].address, signers[1].address, signers[2].address];
-    MyTokenC = await new MyToken__factory(signers[0]).deploy(
+
+    // Load Vyper contract artifacts
+    const myTokenArtifact = await hre.artifacts.readArtifact("MyToken");
+    const tinyBankArtifact = await hre.artifacts.readArtifact("TinyBank");
+
+    const MyTokenFactory = await hre.ethers.getContractFactoryFromArtifact(
+      myTokenArtifact
+    );
+    const TinyBankFactory = await hre.ethers.getContractFactoryFromArtifact(
+      tinyBankArtifact
+    );
+
+    MyTokenC = await MyTokenFactory.connect(signers[0]).deploy(
       "MyToken",
       "MT",
       Number(DECIMALS),
       MINTING_AMOUNT
     );
-    TinyBankC = await new TinyBank__factory(signers[0]).deploy(
+
+    // Convert managers array to fixed-size array (pad with zero addresses)
+    const managersArray: string[] = new Array(100).fill(
+      "0x0000000000000000000000000000000000000000"
+    );
+    for (let i = 0; i < managers.length; i++) {
+      managersArray[i] = managers[i];
+    }
+
+    TinyBankC = await TinyBankFactory.connect(signers[0]).deploy(
       await MyTokenC.getAddress(),
-      managers
+      managersArray
     );
     await MyTokenC.setManager(await TinyBankC.getAddress());
   });
@@ -49,6 +69,35 @@ describe("TinyBank", () => {
         await TinyBankC.totalStaked()
       );
     });
+
+    it("should emit Staked event", async () => {
+      const signer0 = signers[0];
+      const stakingAmount = hre.ethers.parseUnits("50", Number(DECIMALS));
+      await MyTokenC.approve(await TinyBankC.getAddress(), stakingAmount);
+
+      await expect(TinyBankC.stake(stakingAmount))
+        .to.emit(TinyBankC, "Staked")
+        .withArgs(signer0.address, stakingAmount);
+    });
+
+    it("should emit Staked event for multiple stakes", async () => {
+      const signer0 = signers[0];
+      const stakingAmount1 = hre.ethers.parseUnits("30", Number(DECIMALS));
+      const stakingAmount2 = hre.ethers.parseUnits("20", Number(DECIMALS));
+
+      await MyTokenC.approve(
+        await TinyBankC.getAddress(),
+        stakingAmount1 + stakingAmount2
+      );
+
+      await expect(TinyBankC.stake(stakingAmount1))
+        .to.emit(TinyBankC, "Staked")
+        .withArgs(signer0.address, stakingAmount1);
+
+      await expect(TinyBankC.stake(stakingAmount2))
+        .to.emit(TinyBankC, "Staked")
+        .withArgs(signer0.address, stakingAmount2);
+    });
   });
 
   describe("Withdrawal", () => {
@@ -59,6 +108,53 @@ describe("TinyBank", () => {
       await TinyBankC.stake(stakingAmount);
       await TinyBankC.withdraw(stakingAmount);
       expect(await TinyBankC.staked(signer0.address)).equal(0n);
+    });
+
+    it("should emit Withdrawal event", async () => {
+      const signer0 = signers[0];
+      const stakingAmount = hre.ethers.parseUnits("50", Number(DECIMALS));
+      const withdrawAmount = hre.ethers.parseUnits("30", Number(DECIMALS));
+
+      await MyTokenC.approve(await TinyBankC.getAddress(), stakingAmount);
+      await TinyBankC.stake(stakingAmount);
+
+      await expect(TinyBankC.withdraw(withdrawAmount))
+        .to.emit(TinyBankC, "Withdrawal")
+        .withArgs(signer0.address, withdrawAmount);
+    });
+
+    it("should emit Withdrawal event for partial withdrawal", async () => {
+      const signer0 = signers[0];
+      const stakingAmount = hre.ethers.parseUnits("50", Number(DECIMALS));
+      const withdrawAmount1 = hre.ethers.parseUnits("20", Number(DECIMALS));
+      const withdrawAmount2 = hre.ethers.parseUnits("30", Number(DECIMALS));
+
+      await MyTokenC.approve(await TinyBankC.getAddress(), stakingAmount);
+      await TinyBankC.stake(stakingAmount);
+
+      await expect(TinyBankC.withdraw(withdrawAmount1))
+        .to.emit(TinyBankC, "Withdrawal")
+        .withArgs(signer0.address, withdrawAmount1);
+
+      await expect(TinyBankC.withdraw(withdrawAmount2))
+        .to.emit(TinyBankC, "Withdrawal")
+        .withArgs(signer0.address, withdrawAmount2);
+    });
+
+    it("should emit both Staked and Withdrawal events", async () => {
+      const signer0 = signers[0];
+      const stakingAmount = hre.ethers.parseUnits("50", Number(DECIMALS));
+      const withdrawAmount = hre.ethers.parseUnits("30", Number(DECIMALS));
+
+      await MyTokenC.approve(await TinyBankC.getAddress(), stakingAmount);
+
+      await expect(TinyBankC.stake(stakingAmount))
+        .to.emit(TinyBankC, "Staked")
+        .withArgs(signer0.address, stakingAmount);
+
+      await expect(TinyBankC.withdraw(withdrawAmount))
+        .to.emit(TinyBankC, "Withdrawal")
+        .withArgs(signer0.address, withdrawAmount);
     });
   });
   describe("Reward", () => {
