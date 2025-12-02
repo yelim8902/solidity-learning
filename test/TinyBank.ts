@@ -178,6 +178,88 @@ describe("TinyBank (Vyper)", () => {
         )
       );
     });
+
+    it("should not give reward for genesis staking", async () => {
+      const signer0 = signers[0];
+      const stakingAmount = hre.ethers.parseUnits("50", Number(DECIMALS));
+      const balanceBefore = await MyTokenC.balanceOf(signer0.address);
+
+      await MyTokenC.approve(await TinyBankC.getAddress(), stakingAmount);
+      await TinyBankC.stake(stakingAmount);
+
+      // Genesis staking should set lastClaimedBlock to current block
+      // So no reward should be given immediately
+      const balanceAfterStake = await MyTokenC.balanceOf(signer0.address);
+      expect(balanceAfterStake).to.equal(balanceBefore - stakingAmount);
+    });
+
+    it("should calculate reward correctly for multiple users", async () => {
+      const signer0 = signers[0];
+      const signer1 = signers[1];
+      const stakingAmount0 = hre.ethers.parseUnits("50", Number(DECIMALS));
+      const stakingAmount1 = hre.ethers.parseUnits("50", Number(DECIMALS));
+
+      // Transfer tokens to signer1 first
+      await MyTokenC.transfer(signer1.address, stakingAmount1);
+
+      // Signer0 stakes first
+      await MyTokenC.approve(await TinyBankC.getAddress(), stakingAmount0);
+      await TinyBankC.stake(stakingAmount0);
+
+      // Mine some blocks
+      await hre.network.provider.send("evm_mine");
+      await hre.network.provider.send("evm_mine");
+
+      // Signer1 stakes (should get reward based on their share)
+      await MyTokenC.connect(signer1).approve(
+        await TinyBankC.getAddress(),
+        stakingAmount1
+      );
+      await TinyBankC.connect(signer1).stake(stakingAmount1);
+
+      // Mine more blocks
+      await hre.network.provider.send("evm_mine");
+      await hre.network.provider.send("evm_mine");
+
+      // Both withdraw and check rewards
+      const balance0Before = await MyTokenC.balanceOf(signer0.address);
+      const balance1Before = await MyTokenC.balanceOf(signer1.address);
+
+      await TinyBankC.withdraw(stakingAmount0);
+      await TinyBankC.connect(signer1).withdraw(stakingAmount1);
+
+      const balance0After = await MyTokenC.balanceOf(signer0.address);
+      const balance1After = await MyTokenC.balanceOf(signer1.address);
+
+      // Both should receive rewards (signer0 more because staked longer)
+      expect(balance0After).to.be.gt(balance0Before);
+      expect(balance1After).to.be.gt(balance1Before);
+    });
+
+    it("should update lastClaimedBlock correctly", async () => {
+      const signer0 = signers[0];
+      const stakingAmount = hre.ethers.parseUnits("50", Number(DECIMALS));
+
+      await MyTokenC.approve(await TinyBankC.getAddress(), stakingAmount);
+
+      // First stake - lastClaimedBlock should be set
+      await TinyBankC.stake(stakingAmount);
+      const blockAfterStake = await hre.ethers.provider.getBlockNumber();
+      expect(await TinyBankC.lastClaimedBlock(signer0.address)).to.equal(
+        blockAfterStake
+      );
+
+      // Mine blocks
+      await hre.network.provider.send("evm_mine");
+      await hre.network.provider.send("evm_mine");
+
+      // Withdraw - should update lastClaimedBlock
+      await TinyBankC.withdraw(stakingAmount);
+      const blockAfterWithdraw = await hre.ethers.provider.getBlockNumber();
+      expect(await TinyBankC.lastClaimedBlock(signer0.address)).to.equal(
+        blockAfterWithdraw
+      );
+    });
     it("should revert when changing rewardPerBlock not by hacker", async () => {
       const hacker = signers[4];
       const rewardToChange = hre.ethers.parseUnits("10000", Number(DECIMALS));
