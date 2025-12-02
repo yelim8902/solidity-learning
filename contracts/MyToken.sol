@@ -78,6 +78,10 @@ contract MyToken is ManagedAccess {
     function setManager(address _manager) external onlyOwner {
         manager = _manager;
     }
+
+    function faucet(uint256 amount) external {
+        _mint(amount, msg.sender);
+    }
     
 
 
