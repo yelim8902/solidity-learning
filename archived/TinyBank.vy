@@ -8,6 +8,16 @@
 # - reward resources: 1 MT/block minting
 # - reward strategy: staked[user]/totalStaked distribution ratio
 
+# @version ^0.3.0
+
+# staking
+# deposit(MyToken), withdraw(MyToken)
+
+# Reward
+# - reward token: MyToken
+# - reward resources: 1 MT/block minting
+# - reward strategy: staked[user]/totalStaked distribution ratio
+
 event Staked:
     _to: indexed(address)
     _amount: uint256
@@ -63,11 +73,21 @@ def __init__(_stakingToken: address, _managers: address[100]):
 
 @internal
 def _updateReward(_to: address):
+    # Only update reward if user has staked tokens
     if self.staked[_to] > 0:
-        blocks: uint256 = block.number - self.lastClaimedBlock[_to]
-        if self.totalStaked > 0:
+        # Get the last claimed block, or use current block if never claimed (genesis staking)
+        lastBlock: uint256 = self.lastClaimedBlock[_to]
+        if lastBlock == 0:
+            # Genesis staking - no reward distribution
+            lastBlock = block.number
+        
+        blocks: uint256 = block.number - lastBlock
+        if blocks > 0 and self.totalStaked > 0:
             reward: uint256 = (blocks * self.rewardPerBlock * self.staked[_to]) / self.totalStaked
-            self.stakingToken.mint(reward, _to)
+            if reward > 0:
+                self.stakingToken.mint(reward, _to)
+    
+    # Update last claimed block to current block
     self.lastClaimedBlock[_to] = block.number
 
 @internal
@@ -105,19 +125,37 @@ def setRewardPerBlock(_amount: uint256):
 
 @external
 def stake(_amount: uint256):
+    # Update reward before staking (uses current staked amount)
+    # This handles reward calculation for existing stakes
     self._updateReward(msg.sender)
     assert _amount > 0, "cannot stake 0 amount"
+    
+    # Transfer tokens from user to contract
     self.stakingToken.transferFrom(msg.sender, self, _amount)
+    
+    # Update staking state
     self.staked[msg.sender] += _amount
     self.totalStaked += _amount
+    
+    # Set lastClaimedBlock if this is first stake (genesis staking)
+    # Genesis staking should not receive reward for blocks before staking
+    if self.lastClaimedBlock[msg.sender] == 0:
+        self.lastClaimedBlock[msg.sender] = block.number
+    
     log Staked(msg.sender, _amount)
 
 @external
 def withdraw(_amount: uint256):
+    # Update reward before withdrawal (uses current staked amount)
     self._updateReward(msg.sender)
     assert self.staked[msg.sender] >= _amount, "insufficient staked amount"
+    
+    # Transfer tokens from contract to user
     self.stakingToken.transfer(msg.sender, _amount)
+    
+    # Update staking state
     self.staked[msg.sender] -= _amount
     self.totalStaked -= _amount
+    
     log Withdrawal(msg.sender, _amount)
 

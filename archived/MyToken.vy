@@ -3,6 +3,11 @@
 # Token: smart contract based
 # BIT, ETH, XRP, KAIA: native token
 
+# @version ^0.3.0
+
+# Token: smart contract based
+# BIT, ETH, XRP, KAIA: native token
+
 event Transfer:
     _from: indexed(address)
     _to: indexed(address)
