@@ -1,20 +1,26 @@
 import hre from "hardhat";
 import { expect } from "chai";
-import { MyToken } from "../typechain-types/MyToken";
-import { MyToken__factory } from "../typechain-types/factories/MyToken__factory";
+import { Contract, ContractFactory } from "ethers";
 import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
 import { MINTING_AMOUNT, DECIMALS } from "./constant";
 
-describe("My Token", () => {
-  let myTokenC: MyToken;
+describe("My Token (Vyper)", () => {
+  let myTokenC: Contract;
   let signers: HardhatEthersSigner[];
+  let MyTokenFactory: ContractFactory;
+
   beforeEach("should deploy", async () => {
     signers = await hre.ethers.getSigners();
-    myTokenC = await new MyToken__factory(signers[0]).deploy(
+
+    // Load Vyper contract artifact
+    const artifact = await hre.artifacts.readArtifact("MyToken");
+    MyTokenFactory = await hre.ethers.getContractFactoryFromArtifact(artifact);
+
+    myTokenC = await MyTokenFactory.connect(signers[0]).deploy(
       "MyToken",
       "MT",
       18,
-      100
+      MINTING_AMOUNT
     );
   });
 
@@ -96,15 +102,22 @@ describe("My Token", () => {
     });
   });
 
-  describe("TransferFrom", () => {
+  describe("Approve", () => {
     it("should emit Approval event", async () => {
       const signer1 = signers[1];
       await expect(
         myTokenC.approve(signer1.address, hre.ethers.parseUnits("10", DECIMALS))
       )
         .to.emit(myTokenC, "Approval")
-        .withArgs(signer1.address, hre.ethers.parseUnits("10", DECIMALS));
+        .withArgs(
+          signers[0].address,
+          signer1.address,
+          hre.ethers.parseUnits("10", DECIMALS)
+        );
     });
+  });
+
+  describe("TransferFrom", () => {
     it("should be reverted with insufficient allowance error", async () => {
       const signer0 = signers[0];
       const signer1 = signers[1];
